@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+
+# Generic C/C++ build artifacts
+*.o
+*.out
+
+# Project binaries
+/tree/expr
+/parser/expr
+/compiler/ast
