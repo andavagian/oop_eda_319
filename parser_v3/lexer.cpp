@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <stdexcept>
+#include <string>
 
 std::vector<std::string> lexer(std::stringstream& input)
 {
@@ -26,24 +27,38 @@ std::vector<std::string> lexer(std::stringstream& input)
 		}
 		if (std::isalpha(ch) || source[i] == '_')
 		{
-			std::string var;
+			std::string word;
 			while (i < source.size())
 			{
 				unsigned char c = static_cast<unsigned char>(source[i]);
 				if (!std::isalnum(c) && source[i] != '_')
 					break;
-				var += source[i++];
+				word += source[i++];
 			}
-			out.push_back(var);
+			out.push_back(word);
 			continue;
 		}
-		if (source[i] == '+' || source[i] == '-' || source[i] == '*' || source[i] == '/' || source[i] == '(' || source[i] == ')')
+		// two-character operators — must check before single-char
+		if (i + 1 < source.size())
+		{
+			char c0 = source[i], c1 = source[i + 1];
+			if ((c0 == '=' && c1 == '=') || (c0 == '!' && c1 == '=') ||
+			    (c0 == '>' && c1 == '=') || (c0 == '<' && c1 == '='))
+			{
+				out.push_back(std::string{c0, c1});
+				i += 2;
+				continue;
+			}
+		}
+		// single-character operators and punctuation
+		static const std::string singles = "+-*/(){};<>=!";
+		if (singles.find(source[i]) != std::string::npos)
 		{
 			out.push_back(std::string(1, source[i]));
 			++i;
 			continue;
 		}
-		throw std::runtime_error(std::string("Unexpected token: ") + source[i]);
+		throw std::runtime_error(std::string("Unexpected character: ") + source[i]);
 	}
 
 	return out;
