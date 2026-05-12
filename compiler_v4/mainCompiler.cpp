@@ -16,13 +16,8 @@
 #include <string>
 #include <vector>
 
-// declared in parser_v3/lexer.cpp — forward-declared here to avoid pulling in
-// the parser_v3 Token/Node headers which would conflict with compiler_v4 types.
 std::vector<std::string> lexer(std::stringstream& input);
 
-// ---------------------------------------------------------------------------
-// AST pretty-printer
-// ---------------------------------------------------------------------------
 static void printAST(const ASTNode* node, int depth = 0)
 {
 	std::string pad(depth * 2, ' ');
@@ -120,9 +115,6 @@ static void printAST(const ASTNode* node, int depth = 0)
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Opcode name table
-// ---------------------------------------------------------------------------
 static const char* opName(uint8_t op)
 {
 	switch (static_cast<OpCode>(op))
@@ -147,7 +139,6 @@ static const char* opName(uint8_t op)
 	return "???";
 }
 
-// ---------------------------------------------------------------------------
 static std::unique_ptr<ASTNode> buildAST(const Tokens& tokens)
 {
 	SymbolTable sym;
@@ -156,7 +147,6 @@ static std::unique_ptr<ASTNode> buildAST(const Tokens& tokens)
 	if (!tokens.empty() && tokens[0].type == NodeType::Func)
 		return parseFunc(tokens, pos, sym);
 
-	// bare block of statements
 	sym.enterScope();
 	auto block = std::make_unique<BlockNode>();
 	while (pos < tokens.size())
@@ -165,7 +155,6 @@ static std::unique_ptr<ASTNode> buildAST(const Tokens& tokens)
 	return block;
 }
 
-// ---------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
 	if (argc < 2)

@@ -5,19 +5,19 @@
 
 enum class OpCode : uint8_t
 {
-	LOAD_NUM,  // regs[dest] = constants[right]
-	LOAD_VAR,  // regs[dest] = memory[right]
-	STORE_VAR, // memory[dest] = regs[left]
+	LOAD_NUM,
+	LOAD_VAR,
+	STORE_VAR,
 	ADD, SUB, MUL, DIV,
-	CMP,       // cmpFlag = regs[left] - regs[right]
-	JMP,       // ip = dest (unconditional)
-	JE,        // ip = dest if cmpFlag == 0
-	JNE,       // ip = dest if cmpFlag != 0
-	JG,        // ip = dest if cmpFlag >  0
-	JL,        // ip = dest if cmpFlag <  0
-	JGE,       // ip = dest if cmpFlag >= 0
-	JLE,       // ip = dest if cmpFlag <= 0
-	HALT       // stop execution
+	CMP,
+	JMP,
+	JE,
+	JNE,
+	JG,
+	JL,
+	JGE,
+	JLE,
+	HALT
 };
 
 struct Instruction
@@ -30,13 +30,13 @@ struct Instruction
 
 struct VM
 {
-	std::vector<int>         regs;      // 100 general-purpose registers
-	std::vector<int>         memory;    // variable storage, indexed by SymbolTable addr
-	std::vector<int>         constants; // constant pool
+	std::vector<int>         regs;
+	std::vector<int>         memory;
+	std::vector<int>         constants;
 	std::vector<Instruction> program;
-	int                      next    = 0; // next free register
+	int                      next    = 0;
 	int                      cmpFlag = 0;
-	int                      retReg  = 0; // register holding the return value
+	int                      retReg  = 0;
 
 	VM() : regs(100, 0), memory(256, 0) {}
 

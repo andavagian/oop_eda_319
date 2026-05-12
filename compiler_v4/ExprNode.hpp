@@ -19,7 +19,7 @@ struct VarNode : ASTNode
 
 struct BinOpNode : ASTNode
 {
-	std::string              op; // "+", "-", "*", "/"
+	std::string              op;
 	std::unique_ptr<ASTNode> left;
 	std::unique_ptr<ASTNode> right;
 	explicit BinOpNode(std::string o) : ASTNode(NodeType::Op), op(std::move(o)) {}
@@ -27,7 +27,7 @@ struct BinOpNode : ASTNode
 
 struct CompNode : ASTNode
 {
-	std::string              op; // "==", "!=", ">", "<", ">=", "<="
+	std::string              op;
 	std::unique_ptr<ASTNode> left;
 	std::unique_ptr<ASTNode> right;
 	explicit CompNode(std::string o) : ASTNode(NodeType::Comp), op(std::move(o)) {}

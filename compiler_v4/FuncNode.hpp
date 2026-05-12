@@ -10,7 +10,7 @@ struct FuncNode : ASTNode
 {
 	std::string                              name;
 	std::string                              returnType;
-	std::vector<std::pair<std::string,std::string>> params; // {type, name}
+	std::vector<std::pair<std::string,std::string>> params;
 	std::unique_ptr<ASTNode>                 body;
 
 	FuncNode() : ASTNode(NodeType::Func) {}

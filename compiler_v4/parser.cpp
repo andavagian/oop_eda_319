@@ -12,9 +12,6 @@
 namespace
 {
 
-// ---------------------------------------------------------------------------
-// Parser context — references into the caller's token vector and position
-// ---------------------------------------------------------------------------
 struct Ctx
 {
 	const Tokens& toks;
@@ -37,16 +34,10 @@ struct Ctx
 	}
 };
 
-// ---------------------------------------------------------------------------
-// Forward declarations
-// ---------------------------------------------------------------------------
 static std::unique_ptr<ASTNode>   parseStatement(Ctx& ctx);
 static std::unique_ptr<BlockNode> parseBlock    (Ctx& ctx);
 static std::unique_ptr<ASTNode>   parseExpr     (Ctx& ctx);
 
-// ---------------------------------------------------------------------------
-// Expression parser — recursive descent, respects +/- vs */÷ precedence
-// ---------------------------------------------------------------------------
 static std::unique_ptr<ASTNode> parseFactor(Ctx& ctx)
 {
 	if (ctx.at_end())
@@ -65,7 +56,7 @@ static std::unique_ptr<ASTNode> parseFactor(Ctx& ctx)
 		int addr = ctx.sym.lookup(tok.text);
 		return std::make_unique<VarNode>(tok.text, addr);
 	}
-	if (tok.type == NodeType::OpBr) // '('
+	if (tok.type == NodeType::OpBr)
 	{
 		ctx.pos++;
 		auto inner = parseExpr(ctx);
@@ -107,7 +98,6 @@ static std::unique_ptr<ASTNode> parseExpr(Ctx& ctx)
 	return left;
 }
 
-// Parses "expr comp_op expr" or falls back to a plain expression.
 static std::unique_ptr<ASTNode> parseComp(Ctx& ctx)
 {
 	auto left = parseExpr(ctx);
@@ -123,9 +113,6 @@ static std::unique_ptr<ASTNode> parseComp(Ctx& ctx)
 	return left;
 }
 
-// ---------------------------------------------------------------------------
-// Statement parsers
-// ---------------------------------------------------------------------------
 static std::unique_ptr<BlockNode> parseBlock(Ctx& ctx)
 {
 	ctx.expect(NodeType::OpBody, "Expected '{'");
@@ -142,7 +129,7 @@ static std::unique_ptr<BlockNode> parseBlock(Ctx& ctx)
 
 static std::unique_ptr<ASTNode> parseIf(Ctx& ctx)
 {
-	ctx.pos++; // consume 'if'
+	ctx.pos++;
 	ctx.expect(NodeType::OpBr, "Expected '(' after 'if'");
 
 	auto node = std::make_unique<IfNode>();
@@ -152,9 +139,9 @@ static std::unique_ptr<ASTNode> parseIf(Ctx& ctx)
 
 	if (!ctx.at_end() && ctx.peek().type == NodeType::Else)
 	{
-		ctx.pos++; // consume 'else'
+		ctx.pos++;
 		if (!ctx.at_end() && ctx.peek().type == NodeType::If)
-			node->falseBranch = parseIf(ctx);  // else-if chain
+			node->falseBranch = parseIf(ctx);
 		else
 			node->falseBranch = parseBlock(ctx);
 	}
@@ -163,7 +150,7 @@ static std::unique_ptr<ASTNode> parseIf(Ctx& ctx)
 
 static std::unique_ptr<ASTNode> parseWhile(Ctx& ctx)
 {
-	ctx.pos++; // consume 'while'
+	ctx.pos++;
 	ctx.expect(NodeType::OpBr, "Expected '(' after 'while'");
 
 	auto node = std::make_unique<WhileNode>();
@@ -173,10 +160,9 @@ static std::unique_ptr<ASTNode> parseWhile(Ctx& ctx)
 	return node;
 }
 
-// "int x = expr ;" or "int x ;" (default-inits to 0)
 static std::unique_ptr<ASTNode> parseVarDecl(Ctx& ctx)
 {
-	ctx.pos++; // consume type keyword
+	ctx.pos++;
 	if (ctx.at_end() || ctx.peek().type != NodeType::Var)
 		throw std::runtime_error("Expected variable name after type");
 
@@ -186,7 +172,7 @@ static std::unique_ptr<ASTNode> parseVarDecl(Ctx& ctx)
 	auto node = std::make_unique<AssignNode>(addr, name);
 	if (!ctx.at_end() && ctx.peek().type == NodeType::Assign)
 	{
-		ctx.pos++; // consume '='
+		ctx.pos++;
 		node->rhs = parseExpr(ctx);
 	}
 	else
@@ -197,7 +183,6 @@ static std::unique_ptr<ASTNode> parseVarDecl(Ctx& ctx)
 	return node;
 }
 
-// "x = expr ;"
 static std::unique_ptr<ASTNode> parseAssign(Ctx& ctx)
 {
 	std::string name = ctx.consume().text;
@@ -210,10 +195,9 @@ static std::unique_ptr<ASTNode> parseAssign(Ctx& ctx)
 	return node;
 }
 
-// "return expr ;" or "return ;"
 static std::unique_ptr<ASTNode> parseReturn(Ctx& ctx)
 {
-	ctx.pos++; // consume 'return'
+	ctx.pos++;
 	auto node = std::make_unique<ReturnNode>();
 	if (!ctx.at_end() && !ctx.check(NodeType::Semi))
 		node->expr = parseExpr(ctx);
@@ -234,11 +218,9 @@ static std::unique_ptr<ASTNode> parseStatement(Ctx& ctx)
 	case NodeType::Ret:     return parseReturn(ctx);
 	case NodeType::OpBody:  return parseBlock(ctx);
 	case NodeType::Var:
-		// look one token ahead to decide between assignment and expression-stmt
 		if (ctx.pos + 1 < ctx.toks.size() &&
 		    ctx.toks[ctx.pos + 1].type == NodeType::Assign)
 			return parseAssign(ctx);
-		// expression statement (rare in this language, but handled)
 		{
 			auto e = parseExpr(ctx);
 			ctx.expect(NodeType::Semi, "Expected ';'");
@@ -249,11 +231,8 @@ static std::unique_ptr<ASTNode> parseStatement(Ctx& ctx)
 	}
 }
 
-} // anonymous namespace
+}
 
-// ---------------------------------------------------------------------------
-// Public interface — each creates a Ctx referencing the caller's pos
-// ---------------------------------------------------------------------------
 std::unique_ptr<ASTNode> parseStatement(const Tokens& toks, size_t& pos, SymbolTable& sym)
 {
 	Ctx ctx{toks, pos, sym};
@@ -276,7 +255,7 @@ std::unique_ptr<FuncNode> parseFunc(const Tokens& toks, size_t& pos, SymbolTable
 	node->name       = ctx.expect(NodeType::Var,  "Expected function name").text;
 	ctx.expect(NodeType::OpBr, "Expected '('");
 
-	sym.enterScope(); // parameter scope
+	sym.enterScope();
 	while (!ctx.at_end() && !ctx.check(NodeType::ClBr))
 	{
 		std::string pt = ctx.expect(NodeType::Type, "Expected parameter type").text;
@@ -288,7 +267,7 @@ std::unique_ptr<FuncNode> parseFunc(const Tokens& toks, size_t& pos, SymbolTable
 	}
 	ctx.expect(NodeType::ClBr, "Expected ')'");
 
-	node->body = parseBlock(ctx); // enters/exits its own inner scope
-	sym.exitScope();              // exit parameter scope
+	node->body = parseBlock(ctx);
+	sym.exitScope();
 	return node;
 }

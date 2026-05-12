@@ -5,7 +5,7 @@
 
 struct ReturnNode : ASTNode
 {
-	std::unique_ptr<ASTNode> expr; // nullable (bare return)
+	std::unique_ptr<ASTNode> expr;
 
 	ReturnNode() : ASTNode(NodeType::Ret) {}
 };

@@ -10,11 +10,8 @@
 
 #include <stdexcept>
 
-static int compileNode(const ASTNode* node, VM& vm); // forward declaration
+static int compileNode(const ASTNode* node, VM& vm);
 
-// ---------------------------------------------------------------------------
-// Leaf nodes
-// ---------------------------------------------------------------------------
 static int compileNum(const NumNode* n, VM& vm)
 {
 	int r  = vm.allocReg();
@@ -30,9 +27,6 @@ static int compileVar(const VarNode* n, VM& vm)
 	return r;
 }
 
-// ---------------------------------------------------------------------------
-// Binary arithmetic
-// ---------------------------------------------------------------------------
 static int compileBinOp(const BinOpNode* n, VM& vm)
 {
 	int lReg = compileNode(n->left.get(),  vm);
@@ -50,19 +44,6 @@ static int compileBinOp(const BinOpNode* n, VM& vm)
 	return dest;
 }
 
-// ---------------------------------------------------------------------------
-// Comparison: emits CMP then an inverted conditional jump for backpatching.
-// Returns the index of the jump instruction so the caller can backpatch dest.
-//
-// Logic: we jump to SKIP the body when the condition is FALSE, so the jump
-// opcode is the inverse of the comparison operator:
-//   x > y  → true when cmpFlag >  0 → skip when cmpFlag <= 0 → JLE
-//   x < y  → skip when cmpFlag >= 0 → JGE
-//   x == y → skip when cmpFlag != 0 → JNE
-//   x != y → skip when cmpFlag == 0 → JE
-//   x >= y → skip when cmpFlag <  0 → JL
-//   x <= y → skip when cmpFlag >  0 → JG
-// ---------------------------------------------------------------------------
 static int compileComp(const CompNode* n, VM& vm)
 {
 	int lReg = compileNode(n->left.get(),  vm);
@@ -80,17 +61,15 @@ static int compileComp(const CompNode* n, VM& vm)
 	else throw std::runtime_error("Unknown comparison operator: " + op);
 
 	int jumpIdx = (int)vm.program.size();
-	vm.program.push_back({(uint8_t)jmp, 0, 0, 0}); // dest patched later
+	vm.program.push_back({(uint8_t)jmp, 0, 0, 0});
 	return jumpIdx;
 }
 
-// Handles any condition node: CompNode or a plain expression (non-zero = true).
 static int compileCondition(const ASTNode* cond, VM& vm)
 {
 	if (cond->kind == NodeType::Comp)
 		return compileComp(static_cast<const CompNode*>(cond), vm);
 
-	// fallback: treat non-zero expression as true → jump if zero
 	int r    = compileNode(cond, vm);
 	int zReg = vm.allocReg();
 	int zIdx = vm.addConst(0);
@@ -101,9 +80,6 @@ static int compileCondition(const ASTNode* cond, VM& vm)
 	return jumpIdx;
 }
 
-// ---------------------------------------------------------------------------
-// Statement nodes
-// ---------------------------------------------------------------------------
 static void compileAssign(const AssignNode* n, VM& vm)
 {
 	int r = compileNode(n->rhs.get(), vm);
@@ -123,21 +99,17 @@ static void compileIf(const IfNode* n, VM& vm)
 
 	if (n->falseBranch)
 	{
-		// emit unconditional jump to skip the else branch
 		int skipIdx = (int)vm.program.size();
 		vm.program.push_back({(uint8_t)OpCode::JMP, 0, 0, 0});
 
-		// backpatch the conditional jump to point at the else branch
 		vm.program[jumpIdx].dest = (uint8_t)vm.program.size();
 
 		compileNode(n->falseBranch.get(), vm);
 
-		// backpatch the unconditional jump to point past else
 		vm.program[skipIdx].dest = (uint8_t)vm.program.size();
 	}
 	else
 	{
-		// backpatch the conditional jump to point past the true branch
 		vm.program[jumpIdx].dest = (uint8_t)vm.program.size();
 	}
 }
@@ -148,7 +120,7 @@ static void compileWhile(const WhileNode* n, VM& vm)
 	int jumpIdx   = compileCondition(n->condition.get(), vm);
 	compileNode(n->body.get(), vm);
 	vm.program.push_back({(uint8_t)OpCode::JMP, (uint8_t)loopStart, 0, 0});
-	vm.program[jumpIdx].dest = (uint8_t)vm.program.size(); // exit-loop target
+	vm.program[jumpIdx].dest = (uint8_t)vm.program.size();
 }
 
 static void compileReturn(const ReturnNode* n, VM& vm)
@@ -158,9 +130,6 @@ static void compileReturn(const ReturnNode* n, VM& vm)
 	vm.program.push_back({(uint8_t)OpCode::HALT, 0, 0, 0});
 }
 
-// ---------------------------------------------------------------------------
-// Dispatch
-// ---------------------------------------------------------------------------
 static int compileNode(const ASTNode* node, VM& vm)
 {
 	switch (node->kind)
@@ -187,8 +156,6 @@ static int compileNode(const ASTNode* node, VM& vm)
 		compileReturn(static_cast<const ReturnNode*>(node), vm);
 		return -1;
 	case NodeType::Func:
-		// compile the function body inline (no call/return mechanism needed
-		// for top-level single-function programs)
 		compileNode(static_cast<const FuncNode*>(node)->body.get(), vm);
 		return -1;
 	default:

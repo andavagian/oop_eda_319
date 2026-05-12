@@ -12,6 +12,6 @@ class SymbolTable
 public:
 	void enterScope();
 	void exitScope();
-	int  declare(const std::string& name); // assigns nextAddr++, returns address
-	int  lookup(const std::string& name) const; // top-to-bottom search, throws if absent
+	int  declare(const std::string& name);
+	int  lookup(const std::string& name) const;
 };
