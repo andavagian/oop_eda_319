@@ -18,6 +18,8 @@
 
 std::vector<std::string> lexer(std::stringstream& input);
 
+// ── AST printer ────────────────────────────────────────────────────────────
+
 static void printAST(const ASTNode* node, int depth = 0)
 {
 	std::string pad(depth * 2, ' ');
@@ -31,7 +33,7 @@ static void printAST(const ASTNode* node, int depth = 0)
 	case NodeType::Var:
 	{
 		auto* n = static_cast<const VarNode*>(node);
-		std::cout << pad << "Var(" << n->name << " @mem[" << n->addr << "])\n";
+		std::cout << pad << "Var(" << n->name << " @" << n->addr << ")\n";
 		break;
 	}
 	case NodeType::Op:
@@ -42,6 +44,13 @@ static void printAST(const ASTNode* node, int depth = 0)
 		printAST(n->right.get(), depth + 1);
 		break;
 	}
+	case NodeType::Not:
+	{
+		auto* n = static_cast<const UnaryNode*>(node);
+		std::cout << pad << "Unary(" << n->op << ")\n";
+		printAST(n->operand.get(), depth + 1);
+		break;
+	}
 	case NodeType::Comp:
 	{
 		auto* n = static_cast<const CompNode*>(node);
@@ -50,10 +59,18 @@ static void printAST(const ASTNode* node, int depth = 0)
 		printAST(n->right.get(), depth + 1);
 		break;
 	}
+	case NodeType::Call:
+	{
+		auto* n = static_cast<const CallNode*>(node);
+		std::cout << pad << "Call(" << n->name << ")\n";
+		for (const auto& a : n->args)
+			printAST(a.get(), depth + 1);
+		break;
+	}
 	case NodeType::Assign:
 	{
 		auto* n = static_cast<const AssignNode*>(node);
-		std::cout << pad << "Assign(" << n->name << " @mem[" << n->addr << "])\n";
+		std::cout << pad << "Assign(" << n->name << " @" << n->addr << ")\n";
 		printAST(n->rhs.get(), depth + 1);
 		break;
 	}
@@ -115,9 +132,11 @@ static void printAST(const ASTNode* node, int depth = 0)
 	}
 }
 
-static const char* opName(uint8_t op)
+// ── disassembler ───────────────────────────────────────────────────────────
+
+static const char* opName(OpCode op)
 {
-	switch (static_cast<OpCode>(op))
+	switch (op)
 	{
 	case OpCode::LOAD_NUM:  return "LOAD_NUM";
 	case OpCode::LOAD_VAR:  return "LOAD_VAR";
@@ -126,6 +145,11 @@ static const char* opName(uint8_t op)
 	case OpCode::SUB:       return "SUB";
 	case OpCode::MUL:       return "MUL";
 	case OpCode::DIV:       return "DIV";
+	case OpCode::MOD:       return "MOD";
+	case OpCode::NEG:       return "NEG";
+	case OpCode::NOT_BOOL:  return "NOT_BOOL";
+	case OpCode::AND_BOOL:  return "AND_BOOL";
+	case OpCode::OR_BOOL:   return "OR_BOOL";
 	case OpCode::CMP:       return "CMP";
 	case OpCode::JMP:       return "JMP";
 	case OpCode::JE:        return "JE";
@@ -134,26 +158,52 @@ static const char* opName(uint8_t op)
 	case OpCode::JL:        return "JL";
 	case OpCode::JGE:       return "JGE";
 	case OpCode::JLE:       return "JLE";
+	case OpCode::PUSH_ARG:  return "PUSH_ARG";
+	case OpCode::LOAD_ARG:  return "LOAD_ARG";
+	case OpCode::CALL:      return "CALL";
+	case OpCode::RET:       return "RET";
+	case OpCode::PRINT:     return "PRINT";
 	case OpCode::HALT:      return "HALT";
 	}
 	return "???";
 }
 
-static std::unique_ptr<ASTNode> buildAST(const Tokens& tokens)
+// ── program builder (same logic as mainVM) ─────────────────────────────────
+
+struct Program
 {
-	SymbolTable sym;
-	size_t pos = 0;
+	std::vector<std::unique_ptr<FuncNode>> funcs;
+	std::unique_ptr<BlockNode>             main;
+};
 
-	if (!tokens.empty() && tokens[0].type == NodeType::Func)
-		return parseFunc(tokens, pos, sym);
+static Program buildProgram(const Tokens& tokens)
+{
+	Program prog;
+	size_t  pos = 0;
 
-	sym.enterScope();
-	auto block = std::make_unique<BlockNode>();
+	SymbolTable mainSym;
+	mainSym.enterScope();
+	auto mainBlock = std::make_unique<BlockNode>();
+
 	while (pos < tokens.size())
-		block->statements.push_back(parseStatement(tokens, pos, sym));
-	sym.exitScope();
-	return block;
+	{
+		if (tokens[pos].type == NodeType::Func)
+		{
+			SymbolTable funcSym;
+			prog.funcs.push_back(parseFunc(tokens, pos, funcSym));
+		}
+		else
+		{
+			mainBlock->statements.push_back(parseStatement(tokens, pos, mainSym));
+		}
+	}
+
+	mainSym.exitScope();
+	prog.main = std::move(mainBlock);
+	return prog;
 }
+
+// ── main ───────────────────────────────────────────────────────────────────
 
 int main(int argc, char** argv)
 {
@@ -172,30 +222,39 @@ int main(int argc, char** argv)
 
 	std::string src((std::istreambuf_iterator<char>(file)),
 	                 std::istreambuf_iterator<char>());
-
 	try
 	{
 		std::stringstream ss(src);
 		auto pieces = lexer(ss);
 		auto tokens = tokenize(pieces);
-		auto ast    = buildAST(tokens);
+		auto prog   = buildProgram(tokens);
 
 		std::cout << "=== AST ===\n";
-		printAST(ast.get());
+		for (const auto& fn : prog.funcs)
+			printAST(fn.get());
+		printAST(prog.main.get());
 
 		VM vm;
-		compile(ast.get(), vm);
+		compile(prog.funcs, prog.main.get(), vm);
+
+		// Print function addresses
+		if (!vm.funcPCs.empty())
+		{
+			std::cout << "\n=== Functions ===\n";
+			for (const auto& [name, pc] : vm.funcPCs)
+				std::cout << name << " → PC " << pc << "\n";
+		}
 
 		std::cout << "\n=== Bytecode (" << vm.program.size() << " instructions) ===\n";
 		for (size_t i = 0; i < vm.program.size(); ++i)
 		{
 			const Instruction& instr = vm.program[i];
 			std::cout << i << "\t" << opName(instr.op)
-			          << "\tdest=" << (int)instr.dest
-			          << "  left=" << (int)instr.left
-			          << "  right=" << (int)instr.right;
-			if (static_cast<OpCode>(instr.op) == OpCode::LOAD_NUM)
-				std::cout << "  (const=" << vm.constants[instr.right] << ")";
+			          << "\tdest=" << instr.dest
+			          << "  src1=" << instr.src1
+			          << "  src2=" << instr.src2;
+			if (instr.op == OpCode::LOAD_NUM && instr.src2 < (int)vm.constants.size())
+				std::cout << "  (const=" << vm.constants[instr.src2] << ")";
 			std::cout << "\n";
 		}
 	}

@@ -18,9 +18,12 @@ std::vector<Token> tokenize(const std::vector<std::string>& pieces)
 		if (p == "}")      { tokens.emplace_back(NodeType::ClBody,  p); continue; }
 		if (p == ";")      { tokens.emplace_back(NodeType::Semi,    p); continue; }
 		if (p == "=")      { tokens.emplace_back(NodeType::Assign,  p); continue; }
-		if (p == "(" )     { tokens.emplace_back(NodeType::OpBr,   p); continue; }
-		if (p == ")")      { tokens.emplace_back(NodeType::ClBr,   p); continue; }
-		if (p == "+" || p == "-" || p == "*" || p == "/")
+		if (p == "(")      { tokens.emplace_back(NodeType::OpBr,    p); continue; }
+		if (p == ")")      { tokens.emplace_back(NodeType::ClBr,    p); continue; }
+		if (p == ",")      { tokens.emplace_back(NodeType::Comma,   p); continue; }
+		if (p == "!")      { tokens.emplace_back(NodeType::Not,     p); continue; }
+		if (p == "+" || p == "-" || p == "*" || p == "/" || p == "%" ||
+		    p == "&&"     || p == "||")
 		                   { tokens.emplace_back(NodeType::Op,      p); continue; }
 		if (p == "==" || p == "!=" || p == ">" || p == "<" ||
 		    p == ">=" || p == "<=")

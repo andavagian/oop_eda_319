@@ -43,7 +43,8 @@ std::vector<std::string> lexer(std::stringstream& input)
 		{
 			char c0 = source[i], c1 = source[i + 1];
 			if ((c0 == '=' && c1 == '=') || (c0 == '!' && c1 == '=') ||
-			    (c0 == '>' && c1 == '=') || (c0 == '<' && c1 == '='))
+			    (c0 == '>' && c1 == '=') || (c0 == '<' && c1 == '=') ||
+			    (c0 == '&' && c1 == '&') || (c0 == '|' && c1 == '|'))
 			{
 				out.push_back(std::string{c0, c1});
 				i += 2;
@@ -51,7 +52,7 @@ std::vector<std::string> lexer(std::stringstream& input)
 			}
 		}
 		// single-character operators and punctuation
-		static const std::string singles = "+-*/(){};<>=!";
+		static const std::string singles = "+-*/%(){};<>=!,";
 		if (singles.find(source[i]) != std::string::npos)
 		{
 			out.push_back(std::string(1, source[i]));

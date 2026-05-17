@@ -31,3 +31,9 @@ int SymbolTable::lookup(const std::string& name) const
 	}
 	throw std::runtime_error("Undefined variable: " + name);
 }
+
+void SymbolTable::reset()
+{
+	scopes.clear();
+	nextAddr = 0;
+}

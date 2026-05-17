@@ -3,6 +3,7 @@
 #include "ASTNode.hpp"
 #include <memory>
 #include <string>
+#include <vector>
 
 struct NumNode : ASTNode
 {
@@ -31,4 +32,20 @@ struct CompNode : ASTNode
 	std::unique_ptr<ASTNode> left;
 	std::unique_ptr<ASTNode> right;
 	explicit CompNode(std::string o) : ASTNode(NodeType::Comp), op(std::move(o)) {}
+};
+
+// Unary minus and logical not
+struct UnaryNode : ASTNode
+{
+	std::string              op;
+	std::unique_ptr<ASTNode> operand;
+	explicit UnaryNode(std::string o) : ASTNode(NodeType::Not), op(std::move(o)) {}
+};
+
+// Function / built-in call expression
+struct CallNode : ASTNode
+{
+	std::string                           name;
+	std::vector<std::unique_ptr<ASTNode>> args;
+	explicit CallNode(std::string n) : ASTNode(NodeType::Call), name(std::move(n)) {}
 };

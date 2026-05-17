@@ -34,10 +34,17 @@ struct Ctx
 	}
 };
 
+// ── forward declarations ───────────────────────────────────────────────────
+
 static std::unique_ptr<ASTNode>   parseStatement(Ctx& ctx);
 static std::unique_ptr<BlockNode> parseBlock    (Ctx& ctx);
+static std::unique_ptr<ASTNode>   parseLogical  (Ctx& ctx);
+static std::unique_ptr<ASTNode>   parseComp     (Ctx& ctx);
 static std::unique_ptr<ASTNode>   parseExpr     (Ctx& ctx);
 
+// ── expression grammar ─────────────────────────────────────────────────────
+
+// parseFactor: number | '(' expr ')' | '-' factor | '!' factor | call | var
 static std::unique_ptr<ASTNode> parseFactor(Ctx& ctx)
 {
 	if (ctx.at_end())
@@ -45,32 +52,74 @@ static std::unique_ptr<ASTNode> parseFactor(Ctx& ctx)
 
 	const Token& tok = ctx.peek();
 
+	// Unary minus
+	if (tok.type == NodeType::Op && tok.text == "-")
+	{
+		ctx.pos++;
+		auto operand = parseFactor(ctx);
+		auto node = std::make_unique<UnaryNode>("-");
+		node->operand = std::move(operand);
+		return node;
+	}
+
+	// Logical not
+	if (tok.type == NodeType::Not)
+	{
+		ctx.pos++;
+		auto operand = parseFactor(ctx);
+		auto node = std::make_unique<UnaryNode>("!");
+		node->operand = std::move(operand);
+		return node;
+	}
+
+	// Number literal
 	if (tok.type == NodeType::Num)
 	{
 		ctx.pos++;
 		return std::make_unique<NumNode>(tok.value);
 	}
+
+	// Variable or function call
 	if (tok.type == NodeType::Var)
 	{
 		ctx.pos++;
+		// Function call: identifier followed by '('
+		if (!ctx.at_end() && ctx.peek().type == NodeType::OpBr)
+		{
+			ctx.pos++;   // consume '('
+			auto node = std::make_unique<CallNode>(tok.text);
+			while (!ctx.at_end() && !ctx.check(NodeType::ClBr))
+			{
+				node->args.push_back(parseLogical(ctx));
+				if (!ctx.at_end() && ctx.peek().type == NodeType::Comma)
+					ctx.pos++;
+			}
+			ctx.expect(NodeType::ClBr, "Expected ')' after arguments");
+			return node;
+		}
+		// Regular variable
 		int addr = ctx.sym.lookup(tok.text);
 		return std::make_unique<VarNode>(tok.text, addr);
 	}
+
+	// Parenthesised expression
 	if (tok.type == NodeType::OpBr)
 	{
 		ctx.pos++;
-		auto inner = parseExpr(ctx);
+		auto inner = parseLogical(ctx);
 		ctx.expect(NodeType::ClBr, "Expected ')'");
 		return inner;
 	}
+
 	throw std::runtime_error("Unexpected token in expression: " + tok.text);
 }
 
+// parseTerm: factor ( ('*' | '/' | '%') factor )*
 static std::unique_ptr<ASTNode> parseTerm(Ctx& ctx)
 {
 	auto left = parseFactor(ctx);
 	while (!ctx.at_end() && ctx.peek().type == NodeType::Op &&
-	       (ctx.peek().text == "*" || ctx.peek().text == "/"))
+	       (ctx.peek().text == "*" || ctx.peek().text == "/" || ctx.peek().text == "%"))
 	{
 		std::string op  = ctx.consume().text;
 		auto        rhs = parseFactor(ctx);
@@ -82,6 +131,7 @@ static std::unique_ptr<ASTNode> parseTerm(Ctx& ctx)
 	return left;
 }
 
+// parseExpr: term ( ('+' | '-') term )*
 static std::unique_ptr<ASTNode> parseExpr(Ctx& ctx)
 {
 	auto left = parseTerm(ctx);
@@ -98,6 +148,7 @@ static std::unique_ptr<ASTNode> parseExpr(Ctx& ctx)
 	return left;
 }
 
+// parseComp: expr ( comp_op expr )?
 static std::unique_ptr<ASTNode> parseComp(Ctx& ctx)
 {
 	auto left = parseExpr(ctx);
@@ -112,6 +163,42 @@ static std::unique_ptr<ASTNode> parseComp(Ctx& ctx)
 	}
 	return left;
 }
+
+// parseAnd: comp ( '&&' comp )*
+static std::unique_ptr<ASTNode> parseAnd(Ctx& ctx)
+{
+	auto left = parseComp(ctx);
+	while (!ctx.at_end() && ctx.peek().type == NodeType::Op &&
+	       ctx.peek().text == "&&")
+	{
+		ctx.pos++;
+		auto rhs  = parseComp(ctx);
+		auto node = std::make_unique<BinOpNode>("&&");
+		node->left  = std::move(left);
+		node->right = std::move(rhs);
+		left = std::move(node);
+	}
+	return left;
+}
+
+// parseLogical: and ( '||' and )*
+static std::unique_ptr<ASTNode> parseLogical(Ctx& ctx)
+{
+	auto left = parseAnd(ctx);
+	while (!ctx.at_end() && ctx.peek().type == NodeType::Op &&
+	       ctx.peek().text == "||")
+	{
+		ctx.pos++;
+		auto rhs  = parseAnd(ctx);
+		auto node = std::make_unique<BinOpNode>("||");
+		node->left  = std::move(left);
+		node->right = std::move(rhs);
+		left = std::move(node);
+	}
+	return left;
+}
+
+// ── statement parsers ──────────────────────────────────────────────────────
 
 static std::unique_ptr<BlockNode> parseBlock(Ctx& ctx)
 {
@@ -129,11 +216,11 @@ static std::unique_ptr<BlockNode> parseBlock(Ctx& ctx)
 
 static std::unique_ptr<ASTNode> parseIf(Ctx& ctx)
 {
-	ctx.pos++;
+	ctx.pos++;   // consume 'if'
 	ctx.expect(NodeType::OpBr, "Expected '(' after 'if'");
 
 	auto node = std::make_unique<IfNode>();
-	node->condition = parseComp(ctx);
+	node->condition = parseLogical(ctx);
 	ctx.expect(NodeType::ClBr, "Expected ')' after condition");
 	node->trueBranch = parseBlock(ctx);
 
@@ -150,11 +237,11 @@ static std::unique_ptr<ASTNode> parseIf(Ctx& ctx)
 
 static std::unique_ptr<ASTNode> parseWhile(Ctx& ctx)
 {
-	ctx.pos++;
+	ctx.pos++;   // consume 'while'
 	ctx.expect(NodeType::OpBr, "Expected '(' after 'while'");
 
 	auto node = std::make_unique<WhileNode>();
-	node->condition = parseComp(ctx);
+	node->condition = parseLogical(ctx);
 	ctx.expect(NodeType::ClBr, "Expected ')' after condition");
 	node->body = parseBlock(ctx);
 	return node;
@@ -162,7 +249,7 @@ static std::unique_ptr<ASTNode> parseWhile(Ctx& ctx)
 
 static std::unique_ptr<ASTNode> parseVarDecl(Ctx& ctx)
 {
-	ctx.pos++;
+	ctx.pos++;   // consume type keyword
 	if (ctx.at_end() || ctx.peek().type != NodeType::Var)
 		throw std::runtime_error("Expected variable name after type");
 
@@ -173,7 +260,7 @@ static std::unique_ptr<ASTNode> parseVarDecl(Ctx& ctx)
 	if (!ctx.at_end() && ctx.peek().type == NodeType::Assign)
 	{
 		ctx.pos++;
-		node->rhs = parseExpr(ctx);
+		node->rhs = parseLogical(ctx);
 	}
 	else
 	{
@@ -190,17 +277,17 @@ static std::unique_ptr<ASTNode> parseAssign(Ctx& ctx)
 	ctx.expect(NodeType::Assign, "Expected '=' in assignment");
 
 	auto node = std::make_unique<AssignNode>(addr, name);
-	node->rhs = parseExpr(ctx);
+	node->rhs = parseLogical(ctx);
 	ctx.expect(NodeType::Semi, "Expected ';' after assignment");
 	return node;
 }
 
 static std::unique_ptr<ASTNode> parseReturn(Ctx& ctx)
 {
-	ctx.pos++;
+	ctx.pos++;   // consume 'return'
 	auto node = std::make_unique<ReturnNode>();
 	if (!ctx.at_end() && !ctx.check(NodeType::Semi))
-		node->expr = parseExpr(ctx);
+		node->expr = parseLogical(ctx);
 	ctx.expect(NodeType::Semi, "Expected ';' after return");
 	return node;
 }
@@ -212,17 +299,19 @@ static std::unique_ptr<ASTNode> parseStatement(Ctx& ctx)
 
 	switch (ctx.peek().type)
 	{
-	case NodeType::If:      return parseIf(ctx);
-	case NodeType::While:   return parseWhile(ctx);
-	case NodeType::Type:    return parseVarDecl(ctx);
-	case NodeType::Ret:     return parseReturn(ctx);
-	case NodeType::OpBody:  return parseBlock(ctx);
+	case NodeType::If:     return parseIf(ctx);
+	case NodeType::While:  return parseWhile(ctx);
+	case NodeType::Type:   return parseVarDecl(ctx);
+	case NodeType::Ret:    return parseReturn(ctx);
+	case NodeType::OpBody: return parseBlock(ctx);
 	case NodeType::Var:
+		// Assignment: identifier '=' …
 		if (ctx.pos + 1 < ctx.toks.size() &&
 		    ctx.toks[ctx.pos + 1].type == NodeType::Assign)
 			return parseAssign(ctx);
+		// Expression statement (e.g. function call)
 		{
-			auto e = parseExpr(ctx);
+			auto e = parseLogical(ctx);
 			ctx.expect(NodeType::Semi, "Expected ';'");
 			return e;
 		}
@@ -231,7 +320,9 @@ static std::unique_ptr<ASTNode> parseStatement(Ctx& ctx)
 	}
 }
 
-}
+}   // anonymous namespace
+
+// ── public API ─────────────────────────────────────────────────────────────
 
 std::unique_ptr<ASTNode> parseStatement(const Tokens& toks, size_t& pos, SymbolTable& sym)
 {
@@ -258,11 +349,12 @@ std::unique_ptr<FuncNode> parseFunc(const Tokens& toks, size_t& pos, SymbolTable
 	sym.enterScope();
 	while (!ctx.at_end() && !ctx.check(NodeType::ClBr))
 	{
-		std::string pt = ctx.expect(NodeType::Type, "Expected parameter type").text;
-		std::string pn = ctx.expect(NodeType::Var,  "Expected parameter name").text;
-		sym.declare(pn);
-		node->params.push_back({pt, pn});
-		if (!ctx.at_end() && ctx.peek().text == ",")
+		ctx.expect(NodeType::Type, "Expected parameter type");
+		std::string pn   = ctx.expect(NodeType::Var, "Expected parameter name").text;
+		int         addr = sym.declare(pn);
+		node->params.push_back({"int", pn});
+		node->paramAddrs.push_back(addr);
+		if (!ctx.at_end() && ctx.peek().type == NodeType::Comma)
 			ctx.pos++;
 	}
 	ctx.expect(NodeType::ClBr, "Expected ')'");

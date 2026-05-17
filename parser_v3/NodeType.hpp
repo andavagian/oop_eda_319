@@ -6,7 +6,8 @@ enum class NodeType
 	If, While, Else, Comp,
 	Assign, Not, Semi,
 	OpBody, ClBody, Type,
-	Block, Ret, Func
+	Block, Ret, Func,
+	Call, Comma
 };
 
 enum class Operator

@@ -1,4 +1,5 @@
 #include "BlockNode.hpp"
+#include "FuncNode.hpp"
 #include "VM.hpp"
 #include "compile.hpp"
 #include "execute.hpp"
@@ -13,20 +14,40 @@
 
 std::vector<std::string> lexer(std::stringstream& input);
 
-static std::unique_ptr<ASTNode> buildAST(const Tokens& tokens)
+struct Program
 {
-	SymbolTable sym;
+	std::vector<std::unique_ptr<FuncNode>> funcs;
+	std::unique_ptr<BlockNode>             main;
+};
+
+static Program buildProgram(const Tokens& tokens)
+{
+	Program prog;
+
 	size_t pos = 0;
 
-	if (!tokens.empty() && tokens[0].type == NodeType::Func)
-		return parseFunc(tokens, pos, sym);
+	// Each function gets a fresh SymbolTable so addresses start from 0 per frame
+	// Main code uses its own SymbolTable
+	SymbolTable mainSym;
+	mainSym.enterScope();
+	auto mainBlock = std::make_unique<BlockNode>();
 
-	sym.enterScope();
-	auto block = std::make_unique<BlockNode>();
 	while (pos < tokens.size())
-		block->statements.push_back(parseStatement(tokens, pos, sym));
-	sym.exitScope();
-	return block;
+	{
+		if (tokens[pos].type == NodeType::Func)
+		{
+			SymbolTable funcSym;
+			prog.funcs.push_back(parseFunc(tokens, pos, funcSym));
+		}
+		else
+		{
+			mainBlock->statements.push_back(parseStatement(tokens, pos, mainSym));
+		}
+	}
+
+	mainSym.exitScope();
+	prog.main = std::move(mainBlock);
+	return prog;
 }
 
 int main(int argc, char** argv)
@@ -49,13 +70,14 @@ int main(int argc, char** argv)
 	try
 	{
 		std::stringstream ss(src);
-		auto pieces = lexer(ss);
-		auto tokens = tokenize(pieces);
-		auto ast    = buildAST(tokens);
+		auto pieces  = lexer(ss);
+		auto tokens  = tokenize(pieces);
+		auto prog    = buildProgram(tokens);
 
 		VM vm;
-		compile(ast.get(), vm);
-		std::cout << execute(vm) << "\n";
+		compile(prog.funcs, prog.main.get(), vm);
+		int result = execute(vm);
+		std::cout << result << "\n";
 	}
 	catch (const std::exception& e)
 	{

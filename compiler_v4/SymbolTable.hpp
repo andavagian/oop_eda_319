@@ -14,4 +14,5 @@ public:
 	void exitScope();
 	int  declare(const std::string& name);
 	int  lookup(const std::string& name) const;
+	void reset();   // clear all scopes and reset address counter
 };

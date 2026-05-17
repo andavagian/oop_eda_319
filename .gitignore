@@ -12,3 +12,8 @@
 /tree/expr
 /parser/expr
 /compiler/ast
+/compiler_v4/Compiler
+/compiler_v4/VirtualMachine
+
+# Claude Code
+CLAUDE.md

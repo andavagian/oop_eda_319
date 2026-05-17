@@ -11,6 +11,7 @@ struct FuncNode : ASTNode
 	std::string                              name;
 	std::string                              returnType;
 	std::vector<std::pair<std::string,std::string>> params;
+	std::vector<int>                         paramAddrs;
 	std::unique_ptr<ASTNode>                 body;
 
 	FuncNode() : ASTNode(NodeType::Func) {}
