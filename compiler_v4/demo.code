@@ -1,0 +1,9 @@
+Func int square ( int n ) {
+  return n * n ;
+}
+
+int i = 1 ;
+while ( i <= 5 ) {
+  print ( square ( i ) ) ;
+  i = i + 1 ;
+}

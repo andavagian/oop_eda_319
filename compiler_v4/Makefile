@@ -1,35 +1,32 @@
-NAME1    = Compiler
-NAME2    = VirtualMachine
+NAME     = compiler
 CXX      = c++
 CXXFLAGS = -Wall -Wextra -std=c++17 -I.
 
-COMMON_SRC = SymbolTable.cpp \
-             tokenizer.cpp \
-             parser.cpp \
-             compile.cpp \
-             execute.cpp \
-             ../parser_v3/lexer.cpp
+SRC = SymbolTable.cpp \
+      tokenizer.cpp \
+      parser.cpp \
+      IR.cpp \
+      Assembler.cpp \
+      MachineCode.cpp \
+      CPU.cpp \
+      main.cpp \
+      ../parser_v3/lexer.cpp
 
-OBJ_COMMON = $(COMMON_SRC:.cpp=.o)
-OBJ1       = $(OBJ_COMMON) mainCompiler.o
-OBJ2       = $(OBJ_COMMON) mainVM.o
+OBJ = $(SRC:.cpp=.o)
 
-all: $(NAME1) $(NAME2)
+all: $(NAME)
 
-$(NAME1): $(OBJ1)
-	$(CXX) $(CXXFLAGS) $(OBJ1) -o $(NAME1)
-
-$(NAME2): $(OBJ2)
-	$(CXX) $(CXXFLAGS) $(OBJ2) -o $(NAME2)
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ_COMMON) mainCompiler.o mainVM.o
+	rm -f $(OBJ)
 
 fclean: clean
-	rm -f $(NAME1) $(NAME2)
+	rm -f $(NAME)
 
 re: fclean all
 
