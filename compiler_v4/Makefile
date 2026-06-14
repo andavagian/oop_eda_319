@@ -1,15 +1,15 @@
-NAME     = compiler
+NAME     = compilerv4
 CXX      = c++
 CXXFLAGS = -Wall -Wextra -std=c++17 -I.
 
-SRC = SymbolTable.cpp \
-      tokenizer.cpp \
-      parser.cpp \
-      IR.cpp \
-      Assembler.cpp \
-      MachineCode.cpp \
-      CPU.cpp \
-      main.cpp \
+SRC = SymbolTable/SymbolTable.cpp \
+      Tokenizer/tokenizer.cpp \
+      Parser/parser.cpp \
+      IR/IR.cpp \
+      Compiler/Assembler.cpp \
+      Compiler/MachineCode.cpp \
+      VirtualMachine/CPU.cpp \
+      Runner/main.cpp \
       ../parser_v3/lexer.cpp
 
 OBJ = $(SRC:.cpp=.o)

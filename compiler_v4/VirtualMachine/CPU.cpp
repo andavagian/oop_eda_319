@@ -1,4 +1,4 @@
-#include "CPU.hpp"
+#include "VirtualMachine/CPU.hpp"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>

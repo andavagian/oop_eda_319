@@ -1,4 +1,4 @@
-#include "SymbolTable.hpp"
+#include "SymbolTable/SymbolTable.hpp"
 
 #include <stdexcept>
 

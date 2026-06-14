@@ -7,11 +7,12 @@
 # Generic C/C++ build artifacts
 *.o
 *.out
+*.exe
 
 # Project binaries
 /tree/expr
 /parser/expr
 /compiler/ast
-/compiler_v4/Compiler
-/compiler_v4/VirtualMachine
+/compiler_v4/compilerv4
+/compiler_v4/program.bin
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ASTNode.hpp"
+#include "AST/ASTNode.hpp"
 #include <memory>
 #include <string>
 

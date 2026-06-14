@@ -1,5 +1,5 @@
 #pragma once
-#include "IR.hpp"
+#include "IR/IR.hpp"
 #include <string>
 #include <unordered_map>
 #include <vector>

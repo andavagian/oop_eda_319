@@ -72,19 +72,35 @@ A complete compiler pipeline with a bytecode VM that supports:
 - Recursion (stack-frame based, up to depth 64)
 - Built-in `print(expr)` for output
 
+The source is organized into one folder per compiler stage (Vahag-style modular layout):
+
+```
+compiler_v4/
+├── AST/            ASTNode + node types (Expr/Assign/Block/Func/If/Return/While)
+├── Tokenizer/      Token.hpp, tokenizer.{hpp,cpp}
+├── SymbolTable/    SymbolTable.{hpp,cpp}
+├── Parser/         parser.{hpp,cpp}
+├── IR/             IR.{hpp,cpp}              (three-address intermediate code)
+├── Compiler/       Assembler + MachineCode   (register allocation → uint32 binary)
+├── VirtualMachine/ CPU.{hpp,cpp}             (bytecode CPU simulator)
+└── Runner/         main.cpp                  (entry point / stage driver)
+```
+
+The lexer (`../parser_v3/lexer.cpp`) and `NodeType` enum stay in `parser_v3/`, shared with `compiler/`.
+
 ### Build
 
 ```bash
 cd compiler_v4 && make
 ```
 
-Produces two binaries: `Compiler` (prints AST + bytecode) and `VirtualMachine` (executes and prints result).
+Produces a single binary, `compilerv4`.
 
 ### Run
 
 ```bash
-./VirtualMachine source.lang    # execute and print return value
-./Compiler source.lang          # print AST + annotated bytecode listing
+./compilerv4 source            # compile and execute (print output)
+./compilerv4 source --dump     # also print the IR and assembly listings
 ```
 
 ### Language syntax
@@ -144,19 +160,25 @@ return 0;
 source file
     │
     ▼
-lexer  (parser_v3/lexer.cpp)        → vector<string> tokens
+lexer      (../parser_v3/lexer.cpp)      → vector<string> tokens
     │
     ▼
-tokenizer  (tokenizer.cpp)          → vector<Token> with NodeType tags
+tokenizer  (Tokenizer/tokenizer.cpp)     → vector<Token> with NodeType tags
     │
     ▼
-parser  (parser.cpp)                → AST (unique_ptr<ASTNode> tree)
+parser     (Parser/parser.cpp)           → AST (unique_ptr<ASTNode> tree)
     │
     ▼
-compiler  (compile.cpp)             → VM bytecode (vector<Instruction>)
+IR         (IR/IR.cpp)                    → three-address IR (vector<IRInstruction>)
     │
     ▼
-executor  (execute.cpp)             → integer result
+assembler  (Compiler/Assembler.cpp)      → register-allocated assembly
+    │
+    ▼
+machine    (Compiler/MachineCode.cpp)    → uint32 bytecode (written to program.bin)
+    │
+    ▼
+CPU sim    (VirtualMachine/CPU.cpp)      → executes bytecode, prints output
 ```
 
 ---

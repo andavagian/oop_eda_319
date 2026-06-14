@@ -1,11 +1,11 @@
-#include "parser.hpp"
+#include "Parser/parser.hpp"
 
-#include "AssignNode.hpp"
-#include "ExprNode.hpp"
-#include "FuncNode.hpp"
-#include "IfNode.hpp"
-#include "ReturnNode.hpp"
-#include "WhileNode.hpp"
+#include "AST/AssignNode.hpp"
+#include "AST/ExprNode.hpp"
+#include "AST/FuncNode.hpp"
+#include "AST/IfNode.hpp"
+#include "AST/ReturnNode.hpp"
+#include "AST/WhileNode.hpp"
 
 #include <stdexcept>
 

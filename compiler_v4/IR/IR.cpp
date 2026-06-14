@@ -1,9 +1,9 @@
-#include "IR.hpp"
-#include "AssignNode.hpp"
-#include "ExprNode.hpp"
-#include "IfNode.hpp"
-#include "ReturnNode.hpp"
-#include "WhileNode.hpp"
+#include "IR/IR.hpp"
+#include "AST/AssignNode.hpp"
+#include "AST/ExprNode.hpp"
+#include "AST/IfNode.hpp"
+#include "AST/ReturnNode.hpp"
+#include "AST/WhileNode.hpp"
 
 IR::IR(SymbolTable& sym) : sym_(sym) { (void)sym_; }
 

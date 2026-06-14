@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ASTNode.hpp"
-#include "BlockNode.hpp"
-#include "FuncNode.hpp"
-#include "SymbolTable.hpp"
-#include "Token.hpp"
+#include "AST/ASTNode.hpp"
+#include "AST/BlockNode.hpp"
+#include "AST/FuncNode.hpp"
+#include "SymbolTable/SymbolTable.hpp"
+#include "Tokenizer/Token.hpp"
 #include <memory>
 #include <vector>
 
