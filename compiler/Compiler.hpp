@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../parser_v3/NodeType.hpp"
-#include "../parser_v3/Node.hpp"
+#include "../common/NodeType.hpp"
+#include "../common/Node.hpp"
 
 #include <vector>
 #include <stdexcept>

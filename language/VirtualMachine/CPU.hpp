@@ -22,6 +22,13 @@ public:
     void loadProgram(const std::string& filename);
     void run(int maxInstructions = 10000);
 
+    // Stepping / inspection API (used by the debugger).
+    bool        step();                              // execute one instruction at PC
+    bool        running() const { return cpu.running && cpu.PC < program.size(); }
+    const CPU&  state() const { return cpu; }
+    std::size_t programSize() const { return program.size(); }
+    uint32_t    instrAt(uint32_t pc) const { return pc < program.size() ? program[pc] : 0u; }
+
 private:
     CPU cpu;
     std::vector<uint32_t> program;

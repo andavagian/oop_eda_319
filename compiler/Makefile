@@ -3,9 +3,9 @@ CXX      = c++
 CXXFLAGS = -Wall -Wextra -std=c++11
 
 SRC = main.cpp \
-      ../parser_v3/lexer.cpp \
-      ../parser_v3/tokenizer.cpp \
-      ../parser_v3/parser.cpp \
+      ../common/lexer.cpp \
+      ../common/tokenizer.cpp \
+      ../common/parser.cpp \
       compile.cpp \
       execute.cpp
 

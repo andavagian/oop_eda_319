@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../parser_v3/NodeType.hpp"
+#include "../common/NodeType.hpp"
 
 struct ASTNode
 {

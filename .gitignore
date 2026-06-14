@@ -13,6 +13,10 @@
 /tree/expr
 /parser/expr
 /compiler/ast
-/compiler_v4/compilerv4
-/compiler_v4/program.bin
+/language/langc
+/language/program.bin
+
+# language linker artifacts
+*.vobj
+/language/*.bin
 

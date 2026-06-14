@@ -1,6 +1,6 @@
-#include "../parser_v3/Token.hpp"
-#include "../parser_v3/Node.hpp"
-#include "../parser_v3/State.hpp"
+#include "../common/Token.hpp"
+#include "../common/Node.hpp"
+#include "../common/State.hpp"
 #include "Compiler.hpp"
 
 // Executes all instructions in prog sequentially against the VM register file.

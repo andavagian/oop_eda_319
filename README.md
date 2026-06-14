@@ -7,14 +7,14 @@ This repository contains four C++ projects demonstrating a progression from simp
 | `tree/` | Parses an infix expression into a syntax tree and evaluates it recursively |
 | `parser/` | Evaluates expressions directly during recursive-descent parsing (no tree built) |
 | `compiler/` | Builds an AST and executes it through a register-based VM (expressions only) |
-| `compiler_v4/` | Full compiler: functions, recursion, control flow, variables, I/O |
+| `language/` | Full compiler: functions, recursion, control flow, variables, I/O |
 
-All projects share `parser_v3/` as a lexing/infrastructure library.
+All projects share `common/` as a lexing/infrastructure library.
 
 ## Requirements
 
 - C++ compiler with C++11 support (`tree`, `parser`, `compiler`)
-- C++17 support (`compiler_v4`)
+- C++17 support (`language`)
 - `make`
 
 ---
@@ -57,7 +57,7 @@ Interactive stdin: enter the expression, then any variable values (one per line)
 
 ---
 
-## Project: `compiler_v4` — Full Compiler
+## Project: `language` — Full Compiler
 
 A complete compiler pipeline with a bytecode VM that supports:
 
@@ -75,32 +75,63 @@ A complete compiler pipeline with a bytecode VM that supports:
 The source is organized into one folder per compiler stage (Vahag-style modular layout):
 
 ```
-compiler_v4/
+language/
 ├── AST/            ASTNode + node types (Expr/Assign/Block/Func/If/Return/While)
-├── Tokenizer/      Token.hpp, tokenizer.{hpp,cpp}
+├── Tokenizer/      Token.hpp, Tokenizer.{hpp,cpp}
 ├── SymbolTable/    SymbolTable.{hpp,cpp}
-├── Parser/         parser.{hpp,cpp}
+├── Parser/         Parser.{hpp,cpp}
 ├── IR/             IR.{hpp,cpp}              (three-address intermediate code)
 ├── Compiler/       Assembler + MachineCode   (register allocation → uint32 binary)
-├── VirtualMachine/ CPU.{hpp,cpp}             (bytecode CPU simulator)
+├── Linker/         Linker.{hpp,cpp}          (object files + multi-file linking)
+├── VirtualMachine/ CPU + Debugger            (bytecode CPU simulator + CLI debugger)
 └── Runner/         main.cpp                  (entry point / stage driver)
 ```
 
-The lexer (`../parser_v3/lexer.cpp`) and `NodeType` enum stay in `parser_v3/`, shared with `compiler/`.
+The lexer (`../common/lexer.cpp`) and `NodeType` enum stay in `common/`, shared with `compiler/`.
 
 ### Build
 
 ```bash
-cd compiler_v4 && make
+cd language && make
 ```
 
-Produces a single binary, `compilerv4`.
+Produces a single binary, `langc`.
 
 ### Run
 
 ```bash
-./compilerv4 source            # compile and execute (print output)
-./compilerv4 source --dump     # also print the IR and assembly listings
+./langc source                        # compile and execute (print output)
+./langc source --dump                 # also print the IR and assembly listings
+./langc source --debug                # compile, then open the CLI debugger
+```
+
+### Multi-file linking
+
+Compile each source to an object (`.vobj`), then link them into one executable:
+
+```bash
+./langc compile lib.code -o lib.vobj   # functions only (no top-level code)
+./langc compile app.code -o app.vobj   # has top-level code = the entry unit
+./langc link app.vobj lib.vobj -o program.bin
+./langc run program.bin
+```
+
+The linker places the entry unit first, rebases jump targets, and resolves cross-file
+function calls against a merged symbol table (errors on undefined/duplicate symbols).
+
+### Debugger
+
+`--debug` (on a source) or `debug <program.bin>` opens an interactive REPL:
+
+```
+s [n]        step one (or n) instructions
+c            continue to next breakpoint or HALT
+r            restart from the beginning
+b <addr>     set breakpoint (instruction index); 'b' lists, 'd <addr>' deletes
+regs         show registers (R0–R7, PC, SP, RA) and flags
+mem <a> [n]  show memory bytes
+dis [n]      disassemble n instructions from PC
+help / q     help / quit
 ```
 
 ### Language syntax
@@ -160,13 +191,13 @@ return 0;
 source file
     │
     ▼
-lexer      (../parser_v3/lexer.cpp)      → vector<string> tokens
+lexer      (../common/lexer.cpp)      → vector<string> tokens
     │
     ▼
-tokenizer  (Tokenizer/tokenizer.cpp)     → vector<Token> with NodeType tags
+tokenizer  (Tokenizer/Tokenizer.cpp)     → vector<Token> with NodeType tags
     │
     ▼
-parser     (Parser/parser.cpp)           → AST (unique_ptr<ASTNode> tree)
+parser     (Parser/Parser.cpp)           → AST (unique_ptr<ASTNode> tree)
     │
     ▼
 IR         (IR/IR.cpp)                    → three-address IR (vector<IRInstruction>)

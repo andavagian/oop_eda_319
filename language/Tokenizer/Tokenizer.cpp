@@ -1,4 +1,4 @@
-#include "Tokenizer/tokenizer.hpp"
+#include "Tokenizer/Tokenizer.hpp"
 
 #include <cctype>
 

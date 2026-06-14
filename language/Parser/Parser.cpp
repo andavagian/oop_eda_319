@@ -1,4 +1,4 @@
-#include "Parser/parser.hpp"
+#include "Parser/Parser.hpp"
 
 #include "AST/AssignNode.hpp"
 #include "AST/ExprNode.hpp"

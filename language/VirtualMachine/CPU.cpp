@@ -141,6 +141,12 @@ void CPUSimulator::loadProgram(const std::string& filename) {
     cpu = CPU();
 }
 
+bool CPUSimulator::step() {
+    if (cpu.running && cpu.PC < (uint32_t)program.size())
+        execute(program[cpu.PC]);
+    return running();
+}
+
 void CPUSimulator::run(int maxInstructions) {
     for (int i = 0; i < maxInstructions && cpu.running; i++) {
         if (cpu.PC >= (uint32_t)program.size()) break;
